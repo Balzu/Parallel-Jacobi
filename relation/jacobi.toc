@@ -1,0 +1,12 @@
+\contentsline {section}{\numberline {1}Problem}{2}{section.1}
+\contentsline {section}{\numberline {2}Dependency analysis}{2}{section.2}
+\contentsline {section}{\numberline {3}Decomposition strategies}{2}{section.3}
+\contentsline {subsection}{\numberline {3.1}Tree of concurrent activities}{2}{subsection.3.1}
+\contentsline {paragraph}{Performance model}{2}{section*.3}
+\contentsline {subsection}{\numberline {3.2}Array of concurrent activities}{3}{subsection.3.2}
+\contentsline {paragraph}{Performance model}{3}{figure.caption.6}
+\contentsline {subsection}{\numberline {3.3}Array of concurrent activities with pipeline}{3}{subsection.3.3}
+\contentsline {paragraph}{Performance model}{4}{section*.7}
+\contentsline {subsection}{\numberline {3.4}Single concurrent activitiy}{4}{subsection.3.4}
+\contentsline {paragraph}{Performance model}{4}{figure.caption.10}
+\contentsline {section}{\numberline {4}Implementation}{4}{section.4}
