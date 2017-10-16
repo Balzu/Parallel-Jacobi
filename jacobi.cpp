@@ -57,8 +57,12 @@ void jacobi(std::vector<std::vector<float>>& a, std::vector<float>& b,
 	float epsilon = a[0][0];  // initialization of epsilon is arbitrary 
 	float acc;
 	std::vector<float> x_new(n);
+	auto start_t = std::chrono::system_clock::now();
+	auto end_t = std::chrono::system_clock::now();
+	std::chrono::duration<double> time;
 	while (k < max_iter && epsilon > tollerance){
 		//std::cout << "\nIteration " << k << std::endl;
+		start_t = std::chrono::system_clock::now();
 		for(int i=0; i< n; i++){
 			acc = 0;
 			for (int j=0; j<n; j++){
@@ -79,7 +83,10 @@ void jacobi(std::vector<std::vector<float>>& a, std::vector<float>& b,
 			if(abs_value > max_diff) max_diff = abs_value;   // max_diff must take the maximum 
 		}
 		if (epsilon > max_diff) epsilon = max_diff;  // epsilon must take the minimum
-		}
+		end_t = std::chrono::system_clock::now();
+		time = end_t - start_t;
+		std::cout << "\nIter " << k  << " Computed in " << time.count() << "s" <<  std::endl;
+	}
 }
 
 
@@ -96,10 +103,13 @@ struct Emitter: ff_node_t<float> {
 	std::vector<float>& x_new;
 	// max_diff holds the maximum difference btw 2 corresponding items (x[i] and x_new[i]) at a given iteration	
 	float epsilon = 10.0, max_diff= 0.0;  // initialization of epsilon is arbitrary 
+	std::chrono::time_point<std::chrono::system_clock> start_t, end_t;
+	std::chrono::duration<double> time;
 	float *svc(float * task){
 		int channel = lb -> get_channel_id();		
 		if (channel >= 0){
 			//std::cout << "Task received from worker " << channel << std::endl;
+			if (received == 0) start_t = std::chrono::system_clock::now();
 			const float& partial_diff =  *task;
 			//std:: cout << partial_diff << std::endl;
 			received++;
@@ -107,6 +117,9 @@ struct Emitter: ff_node_t<float> {
 			if (received == pd){  // One iteration is ended
 				//print_vec(x,n);
 				//print_vec(x_new,n);
+				end_t = std::chrono::system_clock::now();
+				//time = end_t - start_t;
+				//std::cout << "\nIter p" << k  << " Computed in " << time.count() << "s" <<  std::endl;
 				received = 0;
 				if (epsilon > max_diff) epsilon = max_diff;
 				max_diff = 0.0;
@@ -118,12 +131,17 @@ struct Emitter: ff_node_t<float> {
 					lb -> broadcast_task((float *) GO_ON);
 				else
 					lb -> broadcast_task((float *) EOS);
+				time = end_t - start_t;
+				std::cout << "\nIter p" << k  << " Computed in " << time.count() << "s" <<  std::endl;
 			}
 		}
 		else {
 			std::cout << "Task received from channel" << channel << std::endl;
-			lb -> broadcast_task(GO_ON); //TODO: GO_ON is not propagated, but if inside this method it is?
-			return GO_ON; //TODO: ok or useless this line?		
+			start_t = std::chrono::system_clock::now();
+			lb -> broadcast_task(GO_ON); //TODO: GO_ON is not propagated, but if inside this method it is?	
+			end_t = std::chrono::system_clock::now();	
+			time = end_t - start_t;
+			std::cout << "\nTime to broadcast tasks: "  << time.count() << "s" <<  std::endl;
 		}
 		return GO_ON;
 	}
@@ -141,7 +159,10 @@ struct Worker: ff_node_t<float> {
 	std::vector<float>& x_new;
 	int start, nrows, n;
 	float acc = 0;
-	float *svc(float *){					
+	std::chrono::time_point<std::chrono::system_clock> start_t, end_t;
+	std::chrono::duration<double> time;
+	float *svc(float *){	
+		start_t = std::chrono::system_clock::now();				
 		for(int i=start; i<start+nrows; i++){
 			acc = 0;
 			for (int j=0; j<n; j++){
@@ -149,8 +170,15 @@ struct Worker: ff_node_t<float> {
 					acc += a[i][j] * x[j];
 			}
 			x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
-		}		
-		return (new float (compute_difference()));
+		}	
+		auto start_cd = std::chrono::system_clock::now();
+		float result = compute_difference();
+		
+		end_t = std::chrono::system_clock::now();
+		time = end_t - start_t;
+		std::cout << "\nTime to compute for Worker " << get_my_id() << " : "  << time.count() << "s" <<  std::endl;
+		return (new float(result));	
+		//return (new float (compute_difference()));  TODO: reinsert this return, I commented it just because I am measuring times
 	}
 	
 	float compute_difference(){
@@ -168,10 +196,11 @@ struct Worker: ff_node_t<float> {
 void display_result(std::vector<float>& x, int n, bool sequential, std::chrono::duration<double>& time){
 	std::cout << "\n\nAfter computing Jacobi with";
 	if (sequential)
-		std::cout << "out parellization, vector X =" << std::endl;
+		std::cout << "out parellization, \n" << "vector X = { ";
 	else
-		std::cout << " parellization, vector X =" << std::endl;
+		std::cout << " parellization, \n" << "vector X = { ";
 	print_vec(x,n);
+	std::cout << " }" << std::endl;
 	std::cout << "\nComputed in " << time.count() << "s" << std::endl;
 }
 
@@ -205,12 +234,14 @@ int main(int argc, char *argv[]){
 	std::cout << std::endl;
 	*/
 	if (sequential){ 
+		std::cout << "\nshould be true " << sequential  << std::endl;
 		auto start_t = std::chrono::system_clock::now();	
 		jacobi(a,b,x,n,iter,tollerance);
 		auto end = std::chrono::system_clock::now();
 		time = end-start_t;
 	}
 	else {
+		
 		auto start_t = std::chrono::system_clock::now();
 		std::vector<float> x_new(n);
 		init_zero_vec(x_new,n);
@@ -218,6 +249,7 @@ int main(int argc, char *argv[]){
 		int remainder = n - (base * pd);
 		int start = 0;
 		int rows[pd]; 
+		auto start_tp = std::chrono::system_clock::now();
 		std::vector<std::unique_ptr<ff_node>> Workers;
 		for(int i=0; i<pd; i++){
 			rows[i] = base;
@@ -233,6 +265,9 @@ int main(int argc, char *argv[]){
 		farm.add_emitter(E);
 		farm.remove_collector();
 		farm.wrap_around();
+		auto end_tp = std::chrono::system_clock::now();
+		time = end_tp-start_tp;			
+		std::cout << "\nTime to setup parallel activities: " << time.count() << "s" << std::endl;
 		if (farm.run_and_wait_end() < 0) return -1;
 		auto end = std::chrono::system_clock::now();
 		time = end-start_t;			

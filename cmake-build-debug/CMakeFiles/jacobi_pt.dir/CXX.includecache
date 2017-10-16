@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/balzu/Documenti/Università/SPM/MyCode/final_project/jacobi_pt.cpp
+iostream
+-
+thread
+-
+chrono
+-
+vector
+-
+math.h
+-
+string.h
+-
+utility
+-
+tuple
+-
+functional
+-
+

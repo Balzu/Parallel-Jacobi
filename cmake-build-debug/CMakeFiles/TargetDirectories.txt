@@ -1,0 +1,3 @@
+/home/balzu/Documenti/Università/SPM/MyCode/final_project/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/balzu/Documenti/Università/SPM/MyCode/final_project/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/balzu/Documenti/Università/SPM/MyCode/final_project/cmake-build-debug/CMakeFiles/jacobi_pt.dir

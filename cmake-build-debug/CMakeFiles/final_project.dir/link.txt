@@ -1,0 +1,1 @@
+/usr/bin/c++   -pthread -g   CMakeFiles/final_project.dir/jacobi_pt.cpp.o  -o final_project 
