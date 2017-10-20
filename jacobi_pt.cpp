@@ -109,9 +109,10 @@ void jacobi_thread(std::vector<std::vector<float>>& a, std::vector<float>& b,
 			//{
 				
        				//std::lock_guard<std::mutex> lk(m);
+       				m.lock();
        				std::cout << "Thread " << i << " has acquired lock on m " << iter[i] << std::endl;
        				done++;
-       				
+       				m.unlock();
     		//	}		
     			cv.notify_all();  //TODO: should work with notify_one()
 		}
@@ -187,8 +188,10 @@ int main(int argc, char *argv[]){
 		std::unique_lock<std::mutex> lk(m, std::defer_lock);
 		cv.wait(lk, [&]{return (done == pd);}); //Think that after this line, LOCK IS NO MORE HELD
 		// Now iteration ended, so done=0
+		m.lock();
 		done = 0;
 		std::cout << "Main acquired lock on m after wait() at iter  " << curr_iter << std::endl;
+		m.unlock();
 		if (lk.owns_lock()) lk.unlock();
 		
 		/*do {
@@ -204,10 +207,15 @@ int main(int argc, char *argv[]){
 		if(epsilon > max_diff) epsilon = max_diff; 
 		x.swap(x_new);	
 	}
+	curr_iter++;
 	finish = true;
-	init_bool_vec(wait, pd, false);
+	//init_bool_vec(wait, pd, false);
+	std::cout << "Main exited loop and is going to notify the others, at iter  " << curr_iter << std::endl;
 	for (int i=0; i< pd; i++)
-		Workers[i].join();
+		std::cout << "The value of iter is:  " << iter_v[i] << std::endl;
+	cv.notify_all();
+	for (int i=0; i< pd; i++)
+			Workers[i].join();
 		
 	print_vec(x,n);
 	for (int i=0; i<pd; i++)

@@ -3,8 +3,23 @@
 #include <string.h>
 #include <math.h>
 #include <ff/farm.hpp>
+#include <thread>
 #include <chrono>
+#include <mutex>
+#include <condition_variable>
 using namespace ff;
+
+std::mutex m;
+std::condition_variable cv;
+int curr_iter = -1;
+int done = 0;
+int max_iter;
+int pd;
+int n;
+int seed = 123;
+int max = 16;
+bool dd;
+float tollerance;
 
 void init_rand_matrix(std::vector<std::vector<float>>& a, int n, int max, bool diag_dominant){
 	if (diag_dominant == false){   // Build a completely random matrix
@@ -66,7 +81,7 @@ void jacobi(std::vector<std::vector<float>>& a, std::vector<float>& b,
 		for(int i=0; i< n; i++){
 			acc = 0;
 			for (int j=0; j<n; j++){
-				if (i != j)
+				if (i != j) //TODO: maybe this if prevents use of vectorization
 					acc += a[i][j] * x[j];
 			}
 			x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
@@ -192,13 +207,39 @@ struct Worker: ff_node_t<float> {
 	}
 };
 
+void worker_thread(int num, int n, std::vector<float>& x, std::vector<std::vector<float>>& a,
+	std::vector<float>& b, std::vector<float>& x_new, std::vector<float>& x_diff, int start, int nrows)
+{
+    float acc;
+    for(int i=0; i<max_iter; i++){
+        std::unique_lock<std::mutex> lk(m);
+        cv.wait(lk, [&]{return (i==curr_iter);});    
+        std::cout << "Worker " << num << " is doing its work for the " << i << " time \n";        
+        [&] () {
+            for(int i=start; i<start+nrows; i++){
+	        acc = 0.0;
+	        for (int j=0; j<n; j++){
+		    if (i != j)
+		        acc += a[i][j] * x[j];
+	        }
+	        x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
+	    }	
+	} ();	       
+    	done++;
+    	lk.unlock();
+   	cv.notify_all();
+    }    
+}
 
-void display_result(std::vector<float>& x, int n, bool sequential, std::chrono::duration<double>& time){
+
+void display_result(std::vector<float>& x, int n, std::string parallelization, std::chrono::duration<double>& time){
 	std::cout << "\n\nAfter computing Jacobi with";
-	if (sequential)
+	if (parallelization.compare("sequential") == 0 )
 		std::cout << "out parellization, \n" << "vector X = { ";
-	else
-		std::cout << " parellization, \n" << "vector X = { ";
+	else if (parallelization.compare("fastflow") == 0)
+		std::cout << " fastflow, \n" << "vector X = { ";
+	else if (parallelization.compare("pthread") == 0)
+		std::cout << " pthread, \n" << "vector X = { ";	
 	print_vec(x,n);
 	std::cout << " }" << std::endl;
 	std::cout << "\nComputed in " << time.count() << "s" << std::endl;
@@ -206,17 +247,15 @@ void display_result(std::vector<float>& x, int n, bool sequential, std::chrono::
 
 int main(int argc, char *argv[]){
 	if (argc < 2){
-		std::cout << "Usage: " << argv[0] << " <matrix_dimension> <diag_dominant> <iterations> <tollerance> <sequential> <PAR_DEGREE>    \n" << std::endl;
+		std::cout << "Usage: " << argv[0] << " <matrix_dimension> <diag_dominant> <iterations> <tollerance> <parallelization> <PAR_DEGREE>    \n" << std::endl;
 		return -1;
 	}
-	int n = atoi(argv[1]);
-	int pd = atoi(argv[6]);
-	bool sequential = (strcmp(argv[5], "true") == 0) ? true : false; ; 
-	bool dd = (strcmp(argv[2], "true") == 0) ? true : false; 
-	int iter = atoi(argv[3]);
-	float tollerance = atof(argv[4]);
-	int seed = 123;
-	int max = 16;
+	n = atoi(argv[1]);
+	pd = atoi(argv[6]);
+	const std::string parallelization =argv[5]; 
+	dd = (strcmp(argv[2], "true") == 0) ? true : false; 
+	max_iter = atoi(argv[3]);
+	tollerance = atof(argv[4]);
 	std::chrono::duration<double> time;
 	std::vector<std::vector<float>> a(n, std::vector<float>(n));
 	std::vector<float> x(n);
@@ -233,15 +272,15 @@ int main(int argc, char *argv[]){
 	print_vec(b,n);	  
 	std::cout << std::endl;
 	*/
-	if (sequential){ 
-		std::cout << "\nshould be true " << sequential  << std::endl;
-		auto start_t = std::chrono::system_clock::now();	
-		jacobi(a,b,x,n,iter,tollerance);
-		auto end = std::chrono::system_clock::now();
-		time = end-start_t;
+	if (parallelization.compare("sequential") == 0){ 
+	   
+	    auto start_t = std::chrono::system_clock::now();	
+	    jacobi(a,b,x,n,max_iter,tollerance);
+	    auto end = std::chrono::system_clock::now();
+	    time = end-start_t;
 	}
-	else {
-		
+	else 
+	{			
 		auto start_t = std::chrono::system_clock::now();
 		std::vector<float> x_new(n);
 		init_zero_vec(x_new,n);
@@ -250,29 +289,69 @@ int main(int argc, char *argv[]){
 		int start = 0;
 		int rows[pd]; 
 		auto start_tp = std::chrono::system_clock::now();
-		std::vector<std::unique_ptr<ff_node>> Workers;
-		for(int i=0; i<pd; i++){
-			rows[i] = base;
-			if (remainder != 0){  //load balance the remaining rows
-				rows[i]++;
-				remainder--;
+		
+		if (parallelization.compare("fastflow") == 0 )
+		{
+			std::vector<std::unique_ptr<ff_node>> Workers;
+		    for(int i=0; i<pd; i++){
+				rows[i] = base;
+				if (remainder != 0){  //load balance the remaining rows
+					rows[i]++;
+					remainder--;
+				}
+				Workers.push_back(make_unique<Worker>(a,b,x,x_new,n,start,rows[i]));
+				start += rows[i];
 			}
-			Workers.push_back(make_unique<Worker>(a,b,x,x_new,n,start,rows[i]));
-			start += rows[i];
+			ff_Farm<> farm(std::move(Workers));
+			Emitter E(farm.getlb(), max_iter, tollerance, x, x_new, pd, n);
+			farm.add_emitter(E);
+			farm.remove_collector();
+			farm.wrap_around();
+			auto end_tp = std::chrono::system_clock::now();
+			time = end_tp-start_tp;			
+			std::cout << "\nTime to setup parallel activities: " << time.count() << "s" << std::endl;
+			if (farm.run_and_wait_end() < 0) return -1;
+			auto end = std::chrono::system_clock::now();
+			time = end-start_t;	
 		}
-		ff_Farm<> farm(std::move(Workers));
-		Emitter E(farm.getlb(), iter, tollerance, x, x_new, pd, n);
-		farm.add_emitter(E);
-		farm.remove_collector();
-		farm.wrap_around();
-		auto end_tp = std::chrono::system_clock::now();
-		time = end_tp-start_tp;			
-		std::cout << "\nTime to setup parallel activities: " << time.count() << "s" << std::endl;
-		if (farm.run_and_wait_end() < 0) return -1;
-		auto end = std::chrono::system_clock::now();
-		time = end-start_t;			
+		
+		if (parallelization.compare("pthread") == 0 )
+		{
+		    std::vector<float> x_diff(pd);
+   			init_zero_vec(x_diff,pd);
+   			std::vector<std::thread> Workers;
+   			for(int i=0; i<pd; i++){
+        		rows[i] = base;
+				if (remainder != 0){  //load balance the remaining rows
+	    			rows[i]++;
+	    			remainder--;
+				}
+				Workers.push_back(std::thread(worker_thread, i, n, std::ref(x), std::ref(a), std::ref(b),  
+					std::ref(x_new), std::ref(x_diff), start, rows[i]));
+				start += rows[i];
+			}
+    		int k = 0;
+    		while (k < max_iter){
+        	// wait for the worker          
+        		curr_iter = k;
+        		cv.notify_all();        
+        		std::unique_lock<std::mutex> lk(m); // creates the unique lock and LOCKS THE MUTEX        
+     		    cv.wait(lk, [&]{return (done==pd);});  // wait should be done WHEN LOCK
+        		done = 0;
+	    		std::cout << "Main is doing its work for the " << k << " time\n";
+	    		k++;
+	    		x.swap(x_new);
+	    		lk.unlock();        
+   			}
+   			for (int i=0; i< pd; i++)
+				Workers[i].join();
+    		std::cout << "Main is going to end.\n";
+    		auto end = std::chrono::system_clock::now();
+			time = end-start_t;	
+		}
+				
 	}
-	display_result(x, n, sequential, time);
+	display_result(x, n, parallelization, time);
 	return 0;	
 	
 }
