@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016/Debian) (preloaded format=pdflatex 2017.8.17)  12 OCT 2017 13:04
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016/Debian) (preloaded format=pdflatex 2017.8.17)  23 OCT 2017 18:48
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -707,103 +707,111 @@ LaTeX Font Info:    External font `cmex10' loaded for size
  [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-Underfull \hbox (badness 10000) in paragraph at lines 55--56
+Underfull \hbox (badness 10000) in paragraph at lines 55--57
 
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 55--56
-
- []
-
-<dependency_chain.png, id=58, 632.3625pt x 181.67876pt>
+<dependency_chain.png, id=68, 617.30624pt x 108.405pt>
 File: dependency_chain.png Graphic file (type png)
 
 <use dependency_chain.png>
-Package pdftex.def Info: dependency_chain.png used on input line 61.
-(pdftex.def)             Requested size: 271.91057pt x 78.12033pt.
+Package pdftex.def Info: dependency_chain.png used on input line 60.
+(pdftex.def)             Requested size: 265.43651pt x 46.61324pt.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 71.
 
-Underfull \hbox (badness 10000) in paragraph at lines 71--72
-
- []
-
-<tree_ca.png, id=60, 642.4pt x 401.5pt>
-File: tree_ca.png Graphic file (type png)
- <use tree_ca.png>
-Package pdftex.def Info: tree_ca.png used on input line 75.
-(pdftex.def)             Requested size: 276.22661pt x 172.64163pt.
-
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-LaTeX Font Info:    Try loading font information for OMS+cmr on input line 81.
 (/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
 File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 81.
- [2
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 71.
 
- <./dependency_chain.png>] <array_ca.png, id=79, 642.4pt x 236.885pt>
+Underfull \hbox (badness 10000) in paragraph at lines 76--77
+
+ []
+
+[2
+
+ <./dependency_chain.png>] <tree_ca.png, id=86, 642.4pt x 401.5pt>
+File: tree_ca.png Graphic file (type png)
+
+<use tree_ca.png>
+Package pdftex.def Info: tree_ca.png used on input line 80.
+(pdftex.def)             Requested size: 308.3485pt x 192.7178pt.
+ <array_ca.png, id=89, 618.31pt x 215.80624pt>
 File: array_ca.png Graphic file (type png)
- <use array_ca.png>
-Package pdftex.def Info: array_ca.png used on input line 95.
-(pdftex.def)             Requested size: 276.22661pt x 101.85855pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 107--108
+<use array_ca.png>
+Package pdftex.def Info: array_ca.png used on input line 99.
+(pdftex.def)             Requested size: 296.78543pt x 103.58582pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 110--111
 
  []
 
-[3 <./tree_ca.png> <./array_ca.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 108--109
+[3 <./tree_ca.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 111--112
 
  []
 
-<single_worker_pipe.png, id=90, 162.6075pt x 319.1925pt>
+<single_worker_pipe.png, id=99, 173.64874pt x 329.23pt>
 File: single_worker_pipe.png Graphic file (type png)
 
 <use single_worker_pipe.png>
-Package pdftex.def Info: single_worker_pipe.png used on input line 112.
-(pdftex.def)             Requested size: 69.91986pt x 137.25009pt.
-
-<single_worker_p3.png, id=92, 135.50626pt x 198.7425pt>
+Package pdftex.def Info: single_worker_pipe.png used on input line 115.
+(pdftex.def)             Requested size: 83.35045pt x 158.0286pt.
+ [4 <./array_ca.png> <./single_worker_pipe.png>]
+<single_worker_p3.png, id=111, 97.36375pt x 204.765pt>
 File: single_worker_p3.png Graphic file (type png)
 
 <use single_worker_p3.png>
-Package pdftex.def Info: single_worker_p3.png used on input line 123.
-(pdftex.def)             Requested size: 58.26654pt x 85.4576pt.
- [4 <./single_worker_pipe.png> <./single_worker_p3.png>]
-Underfull \hbox (badness 10000) in paragraph at lines 150--151
+Package pdftex.def Info: single_worker_p3.png used on input line 137.
+(pdftex.def)             Requested size: 50.62943pt x 106.4784pt.
+
+Underfull \hbox (badness 10000) in paragraph at lines 151--164
 
  []
 
-<map_no_g.png, id=103, 392.46625pt x 247.92625pt>
+[5 <./single_worker_p3.png>]
+Underfull \hbox (badness 10000) in paragraph at lines 165--178
+
+ []
+
+[6]
+Underfull \hbox (badness 10000) in paragraph at lines 216--217
+
+ []
+
+<map_no_g.png, id=126, 392.46625pt x 247.92625pt>
 File: map_no_g.png Graphic file (type png)
  <use map_no_g.png>
-Package pdftex.def Info: map_no_g.png used on input line 156.
-(pdftex.def)             Requested size: 215.85709pt x 136.35985pt.
- [5 <./map_no_g.png (PNG copy)>]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 164.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 164.
+Package pdftex.def Info: map_no_g.png used on input line 222.
+(pdftex.def)             Requested size: 227.63057pt x 143.79732pt.
+ [7 <./map_no_g.png (PNG copy)>]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 235.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 235.
  (./jacobi.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 164.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 164.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 235.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 235.
 Package rerunfilecheck Info: File `jacobi.out' has not changed.
-(rerunfilecheck)             Checksum: 34680E996B7DFD2F7D258DCEF1490689;530.
+(rerunfilecheck)             Checksum: EEDBC649BDE1DAEABE5160F13D869332;674.
 
 
 LaTeX Warning: There were multiply-defined labels.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 164.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 235.
  ) 
 Here is how much of TeX's memory you used:
- 17620 strings out of 494945
- 332634 string characters out of 6181032
- 395920 words of memory out of 5000000
- 20591 multiletter control sequences out of 15000+600000
+ 17630 strings out of 494945
+ 332757 string characters out of 6181032
+ 396959 words of memory out of 5000000
+ 20594 multiletter control sequences out of 15000+600000
  9164 words of font info for 32 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 62i,10n,92p,553b,410s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 62i,10n,92p,1310b,397s stack positions out of 5000i,500n,10000p,200000b,80000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></usr/share/texli
@@ -814,14 +822,15 @@ t/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texlive/texmf-dist/fonts
 public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/
 amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfont
 s/cm/cmr17.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cm
-r7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb><
-/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/s
-hare/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/te
-xlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
-Output written on jacobi.pdf (5 pages, 209183 bytes).
+r5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb><
+/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/sha
+re/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/tex
+live/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
+Output written on jacobi.pdf (7 pages, 257744 bytes).
 PDF statistics:
- 165 PDF objects out of 1000 (max. 8388607)
- 130 compressed objects within 2 object streams
- 25 named destinations out of 1000 (max. 500000)
- 107 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 196 PDF objects out of 1000 (max. 8388607)
+ 158 compressed objects within 2 object streams
+ 32 named destinations out of 1000 (max. 500000)
+ 123 words of extra memory for PDF output out of 10000 (max. 10000000)
 

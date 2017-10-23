@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <ff/farm.hpp>
+#include <ff/parallel_for.hpp>
 #include <thread>
 #include <chrono>
 #include <mutex>
@@ -12,6 +13,8 @@ using namespace ff;
 std::mutex m;
 std::condition_variable cv;
 int curr_iter = -1;
+std::atomic<int> curr_iter_a (-1);
+std::atomic<int> done_a (0);
 int done = 0;
 int max_iter;
 int pd;
@@ -73,17 +76,17 @@ void jacobi(std::vector<std::vector<float>>& a, std::vector<float>& b,
 	float acc;
 	std::vector<float> x_new(n);
 	auto start_t = std::chrono::system_clock::now();
-	auto end_t = std::chrono::system_clock::now(); //TODO: end_t dichiaralo e basta!
+	auto end_t = std::chrono::system_clock::now();
 	std::chrono::duration<double> time;
 	while (k < max_iter && epsilon > tollerance){
 		//std::cout << "\nIteration " << k << std::endl;
 		start_t = std::chrono::system_clock::now();
 		for(int i=0; i< n; i++){
 			acc = 0;
-			for (int j=0; j<n; j++){
-				if (i != j) //TODO: maybe this if prevents use of vectorization
-					acc += a[i][j] * x[j];
-			}
+			for (int j=0; j<i; j++)
+				acc += a[i][j] * x[j];
+			for (int j=i+1; j<n; j++)
+				acc += a[i][j] * x[j];
 			x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
 		}
 		k++;
@@ -114,6 +117,7 @@ struct Emitter: ff_node_t<float> {
 	int max_iter, pd, n;
 	int k = 0, received = 0;
 	float tollerance;  	
+	bool end = false;
 	std::vector<float>& x;
 	std::vector<float>& x_new;
 	// max_diff holds the maximum difference btw 2 corresponding items (x[i] and x_new[i]) at a given iteration	
@@ -122,35 +126,35 @@ struct Emitter: ff_node_t<float> {
 	std::chrono::duration<double> time;
 	float *svc(float * task){
 		int channel = lb -> get_channel_id();		
-		if (channel >= 0){
+		if (channel >= 0 && !end){
 			//std::cout << "Task received from worker " << channel << std::endl;
-			if (received == 0) start_t = std::chrono::system_clock::now();
+			//if (received == 0) start_t = std::chrono::system_clock::now();
 			const float& partial_diff =  *task;
 			//std:: cout << partial_diff << std::endl;
 			received++;
 			if (partial_diff > max_diff) max_diff=partial_diff;
-			if (received == pd){  // One iteration is ended
-				//print_vec(x,n);
-				//print_vec(x_new,n);
-				end_t = std::chrono::system_clock::now();
+			if (received == pd){  // One iteration is ended				
+			
+				x.swap(x_new);
+				lb -> broadcast_task((float *) GO_ON);
 				//time = end_t - start_t;
 				//std::cout << "\nIter p" << k  << " Computed in " << time.count() << "s" <<  std::endl;
 				received = 0;
 				if (epsilon > max_diff) epsilon = max_diff;
 				max_diff = 0.0;
-				k++;
-				x.swap(x_new);
+				k++;				
 				//std::cout << "\nIteration " << k << std::endl;
 				//print_vec(x,n);
-				if (k < max_iter && epsilon > tollerance)
-					lb -> broadcast_task((float *) GO_ON);
-				else
-					lb -> broadcast_task((float *) EOS);
-				time = end_t - start_t;
-				std::cout << "\nIter p" << k  << " Computed in " << time.count() << "s" <<  std::endl;
+				if (k > max_iter || epsilon < tollerance){
+				    lb -> broadcast_task((float *) EOS);
+				    end = true;
+				}
+					
+					
+				
 			}
 		}
-		else {
+		else if (channel < 0){
 			std::cout << "Task received from channel" << channel << std::endl;
 			start_t = std::chrono::system_clock::now();
 			lb -> broadcast_task(GO_ON); //TODO: GO_ON is not propagated, but if inside this method it is?	
@@ -180,10 +184,11 @@ struct Worker: ff_node_t<float> {
 		start_t = std::chrono::system_clock::now();				
 		for(int i=start; i<start+nrows; i++){
 			acc = 0;
-			for (int j=0; j<n; j++){
-				if (i != j)
+			for (int j=0; j<i; j++)				
 					acc += a[i][j] * x[j];
-			}
+			for (int j=i+1; j<n; j++)		
+					acc += a[i][j] * x[j];
+			
 			x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
 		}	
 		auto start_cd = std::chrono::system_clock::now();
@@ -217,11 +222,11 @@ void worker_thread(int num, int n, std::vector<float>& x, std::vector<std::vecto
         std::cout << "Worker " << num << " is doing its work for the " << i << " time \n";        
         [&] () {
             for(int i=start; i<start+nrows; i++){
-	        acc = 0.0;
-	        for (int j=0; j<n; j++){
-		    if (i != j)
-		        acc += a[i][j] * x[j];
-	        }
+	            acc = 0.0;
+	            for (int j=0; j<i; j++)		    
+		            acc += a[i][j] * x[j];
+		        for (int j=i+1; j<n; j++)		    
+		            acc += a[i][j] * x[j];	        
 	        x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
 	    }	
 	} ();	       
@@ -231,15 +236,40 @@ void worker_thread(int num, int n, std::vector<float>& x, std::vector<std::vecto
     }    
 }
 
+void worker_thread_a(int num, int n, std::vector<float>& x, std::vector<std::vector<float>>& a,
+	std::vector<float>& b, std::vector<float>& x_new, std::vector<float>& x_diff, int start, int nrows)
+{
+    float acc;
+    for(int i=0; i<max_iter; i++){
+        while(i!=curr_iter_a.load()){};    
+        std::cout << "Worker " << num << " is doing its work for the " << i << " time \n";        
+        [&] () {
+            for(int i=start; i<start+nrows; i++){
+	            acc = 0.0;
+	            for (int j=0; j<i; j++)		    
+		            acc += a[i][j] * x[j];
+		        for (int j=i+1; j<n; j++)		    
+		            acc += a[i][j] * x[j];	        
+	        x_new[i] = (1.0/a[i][i]) * (b[i] - acc);
+	        }	
+    	} ();	       
+    	done_a++;  	
+    }    
+}
+
 
 void display_result(std::vector<float>& x, int n, std::string parallelization, std::chrono::duration<double>& time){
 	std::cout << "\n\nAfter computing Jacobi with";
 	if (parallelization.compare("sequential") == 0 )
 		std::cout << "out parellization, \n" << "vector X = { ";
-	else if (parallelization.compare("fastflow") == 0)
-		std::cout << " fastflow, \n" << "vector X = { ";
+	else if (parallelization.compare("fastflowPar") == 0)
+		std::cout << " fastflow paralel for, \n" << "vector X = { ";
+	else if (parallelization.compare("fastflowFarm") == 0)
+		std::cout << " fastflow custom Farm, \n" << "vector X = { ";
 	else if (parallelization.compare("pthread") == 0)
-		std::cout << " pthread, \n" << "vector X = { ";	
+		std::cout << " pthread with locks, \n" << "vector X = { ";	
+	else if (parallelization.compare("pthread_a") == 0)
+		std::cout << " pthread, lock-free, \n" << "vector X = { ";	
 	print_vec(x,n);
 	std::cout << " }" << std::endl;
 	std::cout << "\nComputed in " << time.count() << "s" << std::endl;
@@ -247,11 +277,12 @@ void display_result(std::vector<float>& x, int n, std::string parallelization, s
 
 int main(int argc, char *argv[]){
 	if (argc < 2){
-		std::cout << "Usage: " << argv[0] << " <matrix_dimension> <diag_dominant> <iterations> <tollerance> <parallelization> <PAR_DEGREE>    \n" << std::endl;
+		std::cout << "Usage: " << argv[0] << " <matrix_dimension> <diag_dominant> <iterations> <tollerance> <parallelization> <PAR_DEGREE> <grain>    \n" << std::endl;
 		return -1;
 	}
 	n = atoi(argv[1]);
 	pd = atoi(argv[6]);
+	int grain = atoi(argv[7]);
 	const std::string parallelization =argv[5]; 
 	dd = (strcmp(argv[2], "true") == 0) ? true : false; 
 	max_iter = atoi(argv[3]);
@@ -290,7 +321,7 @@ int main(int argc, char *argv[]){
 		int rows[pd]; 
 		auto start_tp = std::chrono::system_clock::now();
 		
-		if (parallelization.compare("fastflow") == 0 )
+		if (parallelization.compare("fastflowFarm") == 0 )
 		{
 			std::vector<std::unique_ptr<ff_node>> Workers;
 		    for(int i=0; i<pd; i++){
@@ -315,6 +346,46 @@ int main(int argc, char *argv[]){
 			time = end-start_t;	
 		}
 		
+		if (parallelization.compare("fastflowPar") == 0 )
+		{
+			ParallelForReduce<float> pfr(pd, true, true);
+			
+			float epsilon = a[0][0];  // initialization of epsilon is arbitrary 
+			float max_diff, abs_value;
+			auto start_tp = std::chrono::system_clock::now();
+			auto end_t = std::chrono::system_clock::now();
+			for (int k = 0;  k< max_iter && epsilon > tollerance; k++){
+			    start_tp = std::chrono::system_clock::now();			    
+			    pfr.parallel_for(0, n, 1, grain, 
+			    	[&a, &x, &x_new, &b](const long i) {                       		    	
+			    		float acc = 0.0;
+						for (int j=0; j<i; j++)
+							acc += a[i][j] * x[j];
+						for (int j=i+1; j<n; j++)
+							acc += a[i][j] * x[j];			
+						x_new[i] = (1.0/a[i][i]) * (b[i] - acc);						
+			    	},
+			    	pd);			    	
+			    end_t = std::chrono::system_clock::now();
+				time = end_t - start_tp;
+				std::cout << "\nIter " << k  << ": Time to Compute X_new:  " << time.count() << "s" <<  std::endl;
+			   // k++;
+			    x.swap(x_new);
+			    max_diff = 0.0;
+			    #pragma ivdep
+			    for (int i=0; i<n; i++){
+					abs_value = fabs(x_new[i] - x[i]);
+					if(abs_value > max_diff) max_diff = abs_value;   // max_diff must take the maximum 
+				}
+				if (epsilon > max_diff) epsilon = max_diff;  // epsilon must take the minimum
+				end_t = std::chrono::system_clock::now();
+				time = end_t - start_tp;
+				std::cout << "\nIter " << k  << " Computed in " << time.count() << "s" <<  std::endl;
+			}			 
+			auto end = std::chrono::system_clock::now();
+			time = end-start_t;	
+		}
+		
 		if (parallelization.compare("pthread") == 0 )
 		{
 		    std::vector<float> x_diff(pd);
@@ -331,17 +402,49 @@ int main(int argc, char *argv[]){
 				start += rows[i];
 			}
     		int k = 0;
-    		while (k < max_iter){
+    		while (k < max_iter){  //TODO: not vectorized, use for loop (nonstandard)
         	// wait for the worker          
         		curr_iter = k;
         		cv.notify_all();        
         		std::unique_lock<std::mutex> lk(m); // creates the unique lock and LOCKS THE MUTEX        
-     		    cv.wait(lk, [&]{return (done==pd);});  // wait should be done WHEN LOCK
+     		    cv.wait(lk, [&]{return (done==pd);});  // wait should be done WHEN LOCKED
         		done = 0;
 	    		std::cout << "Main is doing its work for the " << k << " time\n";
 	    		k++;
 	    		x.swap(x_new);
 	    		lk.unlock();        
+   			}
+   			for (int i=0; i< pd; i++)
+				Workers[i].join();
+    		std::cout << "Main is going to end.\n";
+    		auto end = std::chrono::system_clock::now();
+			time = end-start_t;	
+		}
+		
+		if (parallelization.compare("pthread_a") == 0 )
+		{
+		    std::vector<float> x_diff(pd);
+   			init_zero_vec(x_diff,pd);
+   			std::vector<std::thread> Workers;
+   			for(int i=0; i<pd; i++){
+        		rows[i] = base;
+				if (remainder != 0){  //load balance the remaining rows
+	    			rows[i]++;
+	    			remainder--;
+				}
+				Workers.push_back(std::thread(worker_thread_a, i, n, std::ref(x), std::ref(a), std::ref(b),  
+					std::ref(x_new), std::ref(x_diff), start, rows[i]));
+				start += rows[i];
+			}
+    		int k = 0;
+    		while (k < max_iter){  //TODO: not vectorized, use for loop (nonstandard)
+        	// wait for the worker          
+        		curr_iter_a.store(k);       
+     		    while (done_a.load()!=pd) {};  // wait should be done WHEN LOCKED
+        		done_a = 0;
+	    		std::cout << "Main is doing its work for the " << k << " time\n";
+	    		k++;
+	    		x.swap(x_new);	    	       
    			}
    			for (int i=0; i< pd; i++)
 				Workers[i].join();

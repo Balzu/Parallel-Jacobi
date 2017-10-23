@@ -3,6 +3,8 @@
 \BOOKMARK [1][-]{section.3}{Decomposition strategies}{}% 3
 \BOOKMARK [2][-]{subsection.3.1}{Tree of concurrent activities}{section.3}% 4
 \BOOKMARK [2][-]{subsection.3.2}{Array of concurrent activities}{section.3}% 5
-\BOOKMARK [2][-]{subsection.3.3}{Array of concurrent activities with pipeline}{section.3}% 6
-\BOOKMARK [2][-]{subsection.3.4}{Single concurrent activitiy}{section.3}% 7
-\BOOKMARK [1][-]{section.4}{Implementation}{}% 8
+\BOOKMARK [3][-]{subsubsection.3.2.1}{Array of concurrent activities with pipeline}{subsection.3.2}% 6
+\BOOKMARK [2][-]{subsection.3.3}{Shortened tree of concurrent activities}{section.3}% 7
+\BOOKMARK [2][-]{subsection.3.4}{Single concurrent activitiy}{section.3}% 8
+\BOOKMARK [1][-]{section.4}{Evaluation}{}% 9
+\BOOKMARK [1][-]{section.5}{Implementation}{}% 10
